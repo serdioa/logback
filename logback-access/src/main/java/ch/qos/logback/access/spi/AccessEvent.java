@@ -72,6 +72,7 @@ public class AccessEvent implements Serializable, IAccessEvent {
     Map<String, String[]> requestParameterMap;
     Map<String, String> responseHeaderMap;
     Map<String, Object> attributeMap;
+    Map<String, String> cookieMap;
 
     long contentLength = SENTINEL;
     int statusCode = SENTINEL;
@@ -420,8 +421,13 @@ public class AccessEvent implements Serializable, IAccessEvent {
 
     @Override
     public String getCookie(String key) {
-
-        if (httpRequest != null) {
+        
+        if (cookieMap != null) {
+            String cookieValue = cookieMap.get(key);
+            if (cookieValue != null) {
+                return cookieValue;
+            }
+        } else if (httpRequest != null) {
             Cookie[] cookieArray = httpRequest.getCookies();
             if (cookieArray == null) {
                 return NA;
@@ -433,6 +439,7 @@ public class AccessEvent implements Serializable, IAccessEvent {
                 }
             }
         }
+        
         return NA;
     }
 
@@ -578,11 +585,34 @@ public class AccessEvent implements Serializable, IAccessEvent {
         buildResponseHeaderMap();
         return new ArrayList<String>(responseHeaderMap.keySet());
     }
+    
+    public Map<String, String> getCookieMap() {
+        if (cookieMap == null) {
+            buildCookieMap();
+        }
+        return cookieMap;
+    }
+    
+    void buildCookieMap() {
+        if (httpRequest != null) {
+            cookieMap = new HashMap<String, String>();
+        
+            Cookie[] cookieArray = httpRequest.getCookies();
+            if (cookieArray == null) {
+                return;
+            }
+
+            for (Cookie cookie : cookieArray) {
+                cookieMap.put(cookie.getName(), cookie.getValue());
+            }
+        }
+    }
 
     public void prepareForDeferredProcessing() {
         getRequestHeaderMap();
         getRequestParameterMap();
         getResponseHeaderMap();
+        getCookieMap();
         getLocalPort();
         getMethod();
         getProtocol();
